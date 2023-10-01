@@ -1,3 +1,6 @@
+import json
+
+from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
@@ -8,6 +11,7 @@ from store.serializers import BooksSerializer
 
 class BooksApiTestCase(APITestCase):
     def setUp(self) -> None:
+        self.user = User.objects.create(username="test username")
         self.book_1 = Book.objects.create(
             name="Test book_1", price="25", author_name="Author 1"
         )
@@ -49,3 +53,43 @@ class BooksApiTestCase(APITestCase):
             BooksSerializer([self.book_1, self.book_3], many=True).data,
             response.data,
         )
+
+    def test_create(self) -> None:
+        self.assertEqual(Book.objects.count(), 3)
+        url = reverse("book-list")
+        data = {"name": "Python3", "price": 150, "author_name": "Idiot"}
+        json_data = json.dumps(data)
+        self.client.force_login(self.user)
+        response = self.client.post(
+            url, data=json_data, content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Book.objects.count(), 4)
+
+    def test_update(self) -> None:
+        url = reverse("book-detail", args=(self.book_1.id,))
+        data = {
+            "name": self.book_1.name,
+            "price": 575,
+            "author_name": self.book_1.author_name,
+        }
+        json_data = json.dumps(data)
+        self.client.force_login(self.user)
+        response = self.client.put(
+            url, data=json_data, content_type="application/json"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.book_1.refresh_from_db()
+        self.assertEqual(self.book_1.price, 575)
+
+    def test_delete(self) -> None:
+        self.assertEqual(Book.objects.count(), 3)
+        url = reverse("book-detail", args=(self.book_1.id,))
+        self.client.force_login(self.user)
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Book.objects.count(), 2)
+        self.assertFalse(Book.objects.filter(id=self.book_1.id).exists())
