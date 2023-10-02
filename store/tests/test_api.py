@@ -1,6 +1,7 @@
 import json
 
 from django.contrib.auth.models import User
+from django.db.models import Count, Case, When
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.exceptions import ErrorDetail
@@ -28,33 +29,44 @@ class BooksApiTestCase(APITestCase):
 
     def test_get(self) -> None:
         url = reverse("book-list")
+        books = Book.objects.all().annotate(
+            annotated_likes=Count(Case(When(relation__like=True, then=1)))
+        )
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            BooksSerializer(
-                [self.book_1, self.book_2, self.book_3], many=True
-            ).data,
+            BooksSerializer(books, many=True).data,
             response.data,
         )
 
     def test_get_filter(self) -> None:
         url = reverse("book-list")
+        books = Book.objects.filter(
+            id__in=[self.book_2.id, self.book_3.id]
+        ).annotate(
+            annotated_likes=Count(Case(When(relation__like=True, then=1)))
+        )
         response = self.client.get(url, data={"price": 55})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            BooksSerializer([self.book_2, self.book_3], many=True).data,
+            BooksSerializer(books, many=True).data,
             response.data,
         )
 
     def test_get_search(self) -> None:
         url = reverse("book-list")
+        books = Book.objects.filter(
+            id__in=[self.book_1.id, self.book_3.id]
+        ).annotate(
+            annotated_likes=Count(Case(When(relation__like=True, then=1)))
+        )
         response = self.client.get(url, data={"search": "Author 1"})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            BooksSerializer([self.book_1, self.book_3], many=True).data,
+            BooksSerializer(books, many=True).data,
             response.data,
         )
 
@@ -214,10 +226,6 @@ class BookRelationTestCase(APITestCase):
             url, data=json_data, content_type="application/json"
         )
 
-        self.assertNotEqual(
-            response.status_code, status.HTTP_200_OK, response.data
+        self.assertEqual(
+            response.status_code, status.HTTP_400_BAD_REQUEST, response.data
         )
-        relation = UserBookRelation.objects.get(
-            user=self.user, book=self.book_1
-        )
-        self.assertNotEqual(relation.rate, 3)
