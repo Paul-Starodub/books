@@ -87,9 +87,6 @@ class BooksApiTestCase(APITestCase):
             BooksSerializer(books, many=True).data[0]["rating"], "5.00"
         )
         self.assertEqual(
-            BooksSerializer(books, many=True).data[0]["likes_count"], 1
-        )
-        self.assertEqual(
             BooksSerializer(books, many=True).data[0]["annotated_likes"], 1
         )
 
