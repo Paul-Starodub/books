@@ -1,4 +1,4 @@
-from django.db.models import Count, Case, When, Avg
+from django.db.models import Count, Case, When
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django_filters.rest_framework import DjangoFilterBackend
@@ -17,7 +17,6 @@ class BookViewSet(viewsets.ModelViewSet):
     queryset = books = (
         Book.objects.annotate(
             annotated_likes=Count(Case(When(relation__like=True, then=1))),
-            rating=Avg("relation__rate"),
         )
         .select_related("owner")
         .prefetch_related("readers")
