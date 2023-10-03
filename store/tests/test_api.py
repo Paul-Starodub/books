@@ -2,7 +2,7 @@ import json
 
 from django.contrib.auth.models import User
 from django.db import connection
-from django.db.models import Count, Case, When, Avg
+from django.db.models import Count, Case, When
 from django.urls import reverse
 from django.test.utils import CaptureQueriesContext
 from rest_framework import status
@@ -42,7 +42,6 @@ class BooksApiTestCase(APITestCase):
             Book.objects.all()
             .annotate(
                 annotated_likes=Count(Case(When(relation__like=True, then=1))),
-                rating=Avg("relation__rate"),
             )
             .order_by("id")
         )
@@ -59,7 +58,6 @@ class BooksApiTestCase(APITestCase):
             Book.objects.filter(id__in=[self.book_2.id, self.book_3.id])
             .annotate(
                 annotated_likes=Count(Case(When(relation__like=True, then=1))),
-                rating=Avg("relation__rate"),
             )
             .order_by("id")
         )
@@ -77,7 +75,6 @@ class BooksApiTestCase(APITestCase):
             Book.objects.filter(id__in=[self.book_1.id, self.book_3.id])
             .annotate(
                 annotated_likes=Count(Case(When(relation__like=True, then=1))),
-                rating=Avg("relation__rate"),
             )
             .order_by("id")
         )

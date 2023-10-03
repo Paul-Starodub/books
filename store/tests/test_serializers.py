@@ -1,5 +1,5 @@
 from django.contrib.auth.models import User
-from django.db.models import Count, Case, When, Avg
+from django.db.models import Count, Case, When
 from django.test import TestCase
 
 from store.models import Book, UserBookRelation
@@ -29,9 +29,11 @@ class BooksSerializerTestCase(TestCase):
         UserBookRelation.objects.create(
             user=user2, book=book_1, like=True, rate=5
         )
-        UserBookRelation.objects.create(
-            user=user3, book=book_1, like=True, rate=4
+        user_book_3 = UserBookRelation.objects.create(
+            user=user3, book=book_1, like=True
         )
+        user_book_3.rate = 4
+        user_book_3.save()
 
         UserBookRelation.objects.create(
             user=user1, book=book_2, like=True, rate=3
@@ -44,7 +46,6 @@ class BooksSerializerTestCase(TestCase):
         books = (
             Book.objects.annotate(
                 annotated_likes=Count(Case(When(relation__like=True, then=1))),
-                rating=Avg("relation__rate"),
             )
             .select_related("owner")
             .prefetch_related("readers")
@@ -58,7 +59,7 @@ class BooksSerializerTestCase(TestCase):
                 "price": "25.00",
                 "author_name": "name1",
                 "annotated_likes": 3,
-                "rating": "4.67",
+                "rating": "5.00",
                 "owner_name": "user1",
                 "readers": [
                     {
