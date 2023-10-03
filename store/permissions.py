@@ -7,7 +7,7 @@ from rest_framework.permissions import SAFE_METHODS, BasePermission
 class IsOwnerOrStaffOrReadOnly(BasePermission):
     def has_object_permission(
         self, request: HttpRequest, view: View, obj: User
-    ):
+    ) -> bool:
         return bool(
             request.method in SAFE_METHODS
             or request.user
