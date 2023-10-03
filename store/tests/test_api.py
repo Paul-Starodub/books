@@ -1,8 +1,10 @@
 import json
 
 from django.contrib.auth.models import User
+from django.db import connection
 from django.db.models import Count, Case, When, Avg
 from django.urls import reverse
+from django.test.utils import CaptureQueriesContext
 from rest_framework import status
 from rest_framework.exceptions import ErrorDetail
 from rest_framework.test import APITestCase
@@ -32,6 +34,10 @@ class BooksApiTestCase(APITestCase):
 
     def test_get(self) -> None:
         url = reverse("book-list")
+        #  check counting of queries - useful for checking select/prefect related
+        with CaptureQueriesContext(connection=connection) as queries:
+            response = self.client.get(url)
+            self.assertEqual(len(queries), 2)
         books = (
             Book.objects.all()
             .annotate(
@@ -40,7 +46,6 @@ class BooksApiTestCase(APITestCase):
             )
             .order_by("id")
         )
-        response = self.client.get(url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
