@@ -1,5 +1,5 @@
 from django.db.models import Count, Case, When, Avg
-from django.http import HttpRequest
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, mixins
@@ -14,10 +14,15 @@ from store.serializers import BooksSerializer, UserBookRelationSerializer
 
 
 class BookViewSet(viewsets.ModelViewSet):
-    queryset = books = Book.objects.annotate(
-        annotated_likes=Count(Case(When(relation__like=True, then=1))),
-        rating=Avg("relation__rate"),
-    ).order_by("id")
+    queryset = books = (
+        Book.objects.annotate(
+            annotated_likes=Count(Case(When(relation__like=True, then=1))),
+            rating=Avg("relation__rate"),
+        )
+        .select_related("owner")
+        .prefetch_related("readers")
+        .order_by("id")
+    )
     serializer_class = BooksSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     permission_classes = [IsOwnerOrStaffOrReadOnly]
@@ -35,12 +40,12 @@ class UserBookRelationView(mixins.UpdateModelMixin, GenericViewSet):
     serializer_class = UserBookRelationSerializer
     lookup_field = "book"
 
-    def get_object(self) -> None:
+    def get_object(self) -> UserBookRelation:
         obj, _ = UserBookRelation.objects.get_or_create(
             user=self.request.user, book_id=self.kwargs["book"]
         )
         return obj
 
 
-def auth(request: HttpRequest):
+def auth(request: HttpRequest) -> HttpResponse:
     return render(request, "oauth.html")
